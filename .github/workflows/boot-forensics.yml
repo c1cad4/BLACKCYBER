@@ -26,13 +26,65 @@ jobs:
         run: python3 scripts/osmosis_boot_verify_exits.py
       - name: Sample historic BOOT pool reserves at archived blocks
         run: python3 scripts/osmosis_boot_reserves.py
-      - name: Validate forensic outputs
+      - name: Assess evidence completeness, not just workflow success
+        id: evidence
+        if: always()
         run: |
           python3 - <<'PY'
-          import json
-          for path in ('research/data/osmosis-boot-audit.json','research/data/boot-lp-exits.json','research/data/boot-lp-exits-verified.json','research/data/boot-pool-reserves.json'):
-              with open(path,encoding='utf-8') as f: result=json.load(f)
-              print(path, 'errors:',len(result.get('errors',[])))
+          import json, pathlib
+          root = pathlib.Path('research/data')
+          paths = ['osmosis-boot-audit.json','boot-lp-exits.json',
+                   'boot-lp-exits-verified.json','boot-pool-reserves.json']
+          data = {}
+          for filename in paths:
+              try:
+                  data[filename] = json.loads((root / filename).read_text(encoding='utf-8'))
+              except Exception as exc:
+                  data[filename] = {'errors':[f'Missing/invalid: {exc}']}
+          audit = data['osmosis-boot-audit.json']
+          exits = data['boot-lp-exits.json']
+          verified = data['boot-lp-exits-verified.json']
+          reserves = data['boot-pool-reserves.json']
+          checks = {
+             'BOOT IBC denom verified':audit.get('deterministic_hash_verified') is True,
+             'Live denom trace verified':audit.get('live_denom_trace_verified') is True,
+             'Archive exit-query coverage complete':exits.get('complete_coverage') is True,
+             'Archive decoded candidates all reviewed':verified.get('coverage_complete_and_verified') is True,
+             'Some reserve snapshots available':bool(reserves.get('block_samples')),
+             'All sampled pool positions confirmed BOOT':all(
+                 p.get('boot_denom_present') is True
+                 for d in reserves.get('block_samples',[])
+                 for p in d.get('pools',[])
+             ) and bool(reserves.get('block_samples')),
+          }
+          status = 'incomplete'
+          if all(checks.values()) and not any(d.get('errors') or d.get('failures') for d in data.values()):
+              status='partial_verified_samples'
+          result={
+             'state':status, 'final_liquidity_conclusion_ready':False,
+             'checks':checks,
+             'source_files':paths,
+             'confirmed_decoded_exit_messages':sum(
+                 x.get('status')=='confirmed_successful_lp_exit_message'
+                 for x in verified.get('records',[])),
+             'confirmed_actual_token_out_events':sum(
+                 x.get('amounts_verified') is True
+                 for x in verified.get('records',[])),
+             'large_exits_ranked_by_amount':False,
+             'wallet_real_world_owners_established':False,
+             'limitations':'Even all green data checks cannot establish ownership or complete historical causality.'
+          }
+          root.mkdir(parents=True,exist_ok=True)
+          (root/'boot-evidence-status.json').write_text(
+             json.dumps(result,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+          print('FORENSIC EVIDENCE STATUS:',status)
+          for name,passed in checks.items():
+              print(('PASS' if passed else 'MISSING')+': '+name)
+          with open(__import__('os').environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('## BOOT forensic evidence status: '+status+'\n\n')
+              for name,passed in checks.items():
+                  f.write(('- ✅ ' if passed else '- ❌ ')+name+'\n')
+              f.write('\n**No final conclusion without independent transaction-level evidence.**\n')
           PY
       - name: Upload immutable findings for human review
         if: always()
