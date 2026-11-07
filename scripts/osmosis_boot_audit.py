@@ -1,88 +1,130 @@
 #!/usr/bin/env python3
-"""BLACKCYBER / BOOT liquidity: current Osmosis pool discovery and evidence snapshot.
-
-READ ONLY: uses public Osmosis SQS API. No wallets or private keys.
-Usage: python3 scripts/osmosis_boot_audit.py
-Output: research/data/osmosis-boot-pools-latest.json
-This captures CURRENT pool state only; it DOES NOT establish historical LP removals.
+"""BLACKCYBER / BOOT forensic evidence collector (read-only).
+Run: python3 scripts/osmosis_boot_audit.py
+Output: research/data/osmosis-boot-audit.json
+Historical LP withdrawal attribution is NOT established by current pool snapshots.
 """
 import datetime as dt
+import hashlib
 import json
-import pathlib
-import urllib.parse
-import urllib.request
+import os
+from pathlib import Path
+from urllib.error import URLError, HTTPError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
-SQS="https://sqs.osmosis.zone"
-LCD="https://lcd.osmosis.zone"
-BOOT_DENOM="ibc/E6931F78057F7CC5DA0FD6CEF82FF39373A6E0452BF1FD76910B93292CF356C1"
-BOOT_HASH=BOOT_DENOM.split("/",1)[1]
-OUTPUT=pathlib.Path("research/data/osmosis-boot-pools-latest.json")
+ASSET_PATH = "transfer/channel-95/boot"
+BOOT_HASH = hashlib.sha256(ASSET_PATH.encode()).hexdigest().upper()
+BOOT_DENOM = "ibc/" + BOOT_HASH
+EXPECTED_BOOT_HASH = "FE2CD1E6828EC0FAB8AF39BAC45BC25B965BA67CCBC50C13A14BD610B0D1E2C4"
+EXCLUDED_CRO_HASH = "E6931F78057F7CC5DA0FD6CEF82FF39373A6E0452BF1FD76910B93292CF356C1"
+POOLS = (596, 597)
+OPTIONAL_POOL = 595  # Requires independent verification of asset contents.
+SQS = os.environ.get("OSMOSIS_SQS", "https://sqs.osmosis.zone")
+LCD = os.environ.get("OSMOSIS_LCD", "https://lcd.osmosis.zone")
+OUT = Path("research/data/osmosis-boot-audit.json")
 
-def fetch(base, path, params=None):
-    url=base+path
+def get_json(base, path, params=None):
+    url = base.rstrip("/") + path
     if params:
-        url+="?"+urllib.parse.urlencode(params)
-    req=urllib.request.Request(url,headers={"User-Agent":"BLACKCYBER-research/0.1 (read-only)", "Accept":"application/json"})
-    with urllib.request.urlopen(req,timeout=35) as res:
-        return json.load(res),url
+        url += "?" + urlencode(params)
+    req = Request(url, headers={"User-Agent": "BLACKCYBER-Forensics/0.2",
+                                "Accept": "application/json"})
+    with urlopen(req, timeout=20) as response:
+        return json.load(response), url
+
+def contains_exact_denom(pool, denom):
+    """Search only actual token denom fields, not labels or arbitrary strings."""
+    found = []
+    def walk(value):
+        if isinstance(value, dict):
+            for k, v in value.items():
+                if k in ("denom", "token_denom", "coinMinimalDenom") and v == denom:
+                    found.append(True)
+                else:
+                    walk(v)
+        elif isinstance(value, list):
+            for sub in value:
+                walk(sub)
+    walk(pool)
+    return bool(found)
 
 def main():
-    result={
-      "generated_at_utc":dt.datetime.now(dt.timezone.utc).isoformat(),
-      "network":"osmosis-1","asset":"BOOT","denom":BOOT_DENOM,
-      "purpose":"Discover current BOOT pools; NOT attribution of withdrawals",
-      "sources":{},"pools":[],"errors":[],"historical_withdrawals_verified":False
+    if BOOT_HASH != EXPECTED_BOOT_HASH or BOOT_HASH == EXCLUDED_CRO_HASH:
+        raise RuntimeError("BOOT token integrity check failed")
+    out = {
+      "as_of_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+      "chain_id": "osmosis-1",
+      "network": "Bostrom / Osmosis IBC",
+      "asset": "BOOT",
+      "ibc_path": ASSET_PATH,
+      "denom": BOOT_DENOM,
+      "deterministic_hash_verified": True,
+      "historic_pool_ids_from_2021_sources": list(POOLS),
+      "pool_595_requires_independent_check": True,
+      "pool_snapshots": [],
+      "errors": [],
+      "sources": [],
+      "historical_lp_withdrawal_transactions": [],
+      "wallet_owners_attributed": [],
+      "historical_lp_withdrawals_verified": False,
+      "conclusion": "Pool discovery is not proof of LP withdrawal or ownership."
     }
-    # Verify that the historical asset IBC hash still points at boot/channel-95,
-    # and not a different asset with a matching display symbol.
     try:
-        trace,url=fetch(LCD,"/ibc/apps/transfer/v1/denom_traces/"+BOOT_HASH)
-        result["sources"]["denom_trace"]=url
-        result["denom_trace"]=trace
-        v=trace.get("denom_trace",{})
-        if v.get("base_denom")!="boot" or "channel-95" not in v.get("path",""):
-            result["errors"].append("DENOM CHECK FAILED: requires manual confirmation; pool results not trusted")
-            result["integrity_passed"]=False
-            OUTPUT.parent.mkdir(parents=True,exist_ok=True)
-            OUTPUT.write_text(json.dumps(result,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
-            raise SystemExit(2)
-        result["integrity_passed"]=True
-    except Exception as err:
-        result["errors"].append("Denom verification unavailable: "+str(err))
-        result["integrity_passed"]=False
+        trace, link = get_json(LCD, "/ibc/apps/transfer/v1/denom_traces/" + BOOT_HASH)
+        out["sources"].append(link)
+        trace_data = trace.get("denom_trace", trace.get("denomTrace", {}))
+        out["live_denom_trace"] = trace_data
+        out["live_denom_trace_verified"] = (
+            trace_data.get("path") == "transfer/channel-95"
+            and trace_data.get("base_denom", trace_data.get("baseDenom")) == "boot"
+        )
+        if not out["live_denom_trace_verified"]:
+            out["errors"].append("Node IBC denom trace unavailable or mismatch; do not trust pool associations")
+    except (HTTPError, URLError, TimeoutError, ValueError, OSError) as exc:
+        out["live_denom_trace_verified"] = False
+        out["errors"].append("Denom trace request failed: " + str(exc))
 
-    # Historical BOOT pools: 595, 596 and 597 from Osmosis 2021-2023 public records.\n    # They must be verified against the BOOT IBC denom in current pool balances.\n    result["historical_pool_ids_to_check"]=[595,596,597]\n    # SQS /pools is an officially documented pool-discovery endpoint.
-    # A successful match is an on-chain pool association, not an ownership claim.
-    cursor=0
-    for page in range(30):
-        try:
-            obj,url=fetch(SQS,"/pools",{"filter[denom]":BOOT_DENOM,"page[size]":100,"page[cursor]":cursor})
-        except Exception as err:
-            result["errors"].append(f"Pool query failed at cursor {cursor}: {err}")
-            break
-        result["sources"]["pools"]=SQS+"/pools?filter[denom]="+urllib.parse.quote(BOOT_DENOM,safe="/")
-        rows=obj.get("data",[])
-        result["pools"].extend(rows)
-        if len(rows)==0:break
-        nxt=obj.get("meta",{}).get("next_cursor",-1)
-        if nxt in (-1,None) or str(nxt)==str(cursor):break
-        cursor=int(nxt)
-    # Independently request documented historical pool IDs.\n    # This is not a historical snapshot; data returned is the current state.\n    try:\n        known,url=fetch(SQS,"/pools",{"filter[id]":"595,596,597"})\n        result["sources"]["historical_pool_id_lookup"]=url\n        result["historical_pool_current_status"]=known.get("data",[]) if isinstance(known,dict) else known\n    except Exception as err:\n        result["errors"].append("Historical pool ID lookup unavailable: "+str(err))\n    # Do not interpret status until denom trace is validated.
-    result["pool_count"]=len(result["pools"])
-    result["analysis_limitations"]=[
-       "Snapshot is latest state, not reserves in 2025/2026.",
-       "An LP withdrawal requires a verified MsgExitPool or MsgWithdrawPosition tx, with pool_id, sender, amounts and tx hash.",
-       "Swaps change reserves; reserve decrease alone is not evidence of LP withdrawal.",
-       "An address does not identify a person without independent verification.",
-       "If denom trace cannot be validated, this snapshot is unverified."
+    # SQS returns current (not historical) pool state.
+    try:
+        pools, link = get_json(SQS, "/pools", {"filter[id]": "595,596,597"})
+        out["sources"].append(link)
+        records = pools.get("data", []) if isinstance(pools, dict) else pools
+        for p in records:
+            chain = p.get("chain_model", {})
+            pid = p.get("id", p.get("pool_id", chain.get("id")))
+            try:
+                pid = int(pid)
+            except (ValueError, TypeError):
+                continue
+            out["pool_snapshots"].append({
+                "pool_id": pid,
+                "contains_verified_boot_denom": contains_exact_denom(p, BOOT_DENOM),
+                "current_state": p
+            })
+    except (HTTPError, URLError, TimeoutError, ValueError, OSError) as exc:
+        out["errors"].append("SQS pool request failed: " + str(exc))
+
+    # A local indexer export can be analyzed later, but is not presented as
+    # independently validated on-chain evidence.
+    out["limitations"] = [
+      "SQS is current state only and trade list retention is limited.",
+      "Historic BOOT reserve balances need archive RPC/LCD block-height queries or a historical indexer.",
+      "Only verified MsgExitPool/MsgWithdrawPosition transactions show LP removal.",
+      "Pool reserve decline also occurs after swaps; reserve levels alone do not prove LP removal.",
+      "A publicly visible address does not identify the person who controls it.",
+      "No transaction hash, withdrawn quantity or address will be fabricated."
     ]
-    OUTPUT.parent.mkdir(parents=True,exist_ok=True)
-    OUTPUT.write_text(json.dumps(result,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
-    print("Saved",OUTPUT,"pool_count=",result["pool_count"],"integrity=",result["integrity_passed"])
-    for p in result["pools"]:
-        print("pool ID:",p.get("id",p.get("pool_id",p.get("poolId","unknown"))))
-    if not result["integrity_passed"]:
-        raise SystemExit("Unverified denom: do NOT use pools as confirmed evidence")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print("BOOT IBC hash verified:", BOOT_HASH)
+    print("Pools retrieved:", len(out["pool_snapshots"]))
+    print("LP exit transactions established:", len(out["historical_lp_withdrawal_transactions"]))
+    print("Output:", OUT)
+    for error in out["errors"]:
+        print("WARNING:", error)
+    if not out["live_denom_trace_verified"]:
+        print("NOTE: live denom trace NOT verified; results are provisional.")
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
