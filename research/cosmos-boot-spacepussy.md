@@ -112,8 +112,8 @@
 
 В репозитории находятся два **read-only** инструмента:
 
-1. [scripts/osmosis_boot_audit.py](../../scripts/osmosis_boot_audit.py) — независимо вычисляет BOOT IBC-хэш, получает denom trace и пробует загрузить **текущее** состояние пулов 595–597.
-2. [scripts/osmosis_boot_exits.py](../../scripts/osmosis_boot_exits.py) — пробует найти кандидатов на операции \`pool_exited.pool_id = '596'\` / \`'597'\` через **архивный RPC Osmosis**, сохраняет tx hashes и высоты, **если** индексатор их отдаёт. Кандидаты ещё не равны подтверждённому выводу LP; необходимо декодировать tx body, проверить успешное выполнение и реальное количество \`tokens_out\`.
+1. [scripts/osmosis_boot_audit.py](../scripts/osmosis_boot_audit.py) — независимо вычисляет BOOT IBC-хэш, получает denom trace и пробует загрузить **текущее** состояние пулов 595–597.
+2. [scripts/osmosis_boot_exits.py](../scripts/osmosis_boot_exits.py) — пробует найти кандидатов на операции \`pool_exited.pool_id = '596'\` / \`'597'\` через **архивный RPC Osmosis**, сохраняет tx hashes и высоты, **если** индексатор их отдаёт. Кандидаты ещё не равны подтверждённому выводу LP; необходимо декодировать tx body, проверить успешное выполнение и реальное количество \`tokens_out\`.
 
 Архивный RPC: https://rpc.archive.osmosis.zone ; архивный LCD: https://lcd.archive.osmosis.zone . Официальная документация: https://docs.osmosis.zone/integrate/endpoints/ .
 
