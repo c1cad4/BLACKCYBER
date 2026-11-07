@@ -14,7 +14,7 @@ import urllib.request
 
 SQS="https://sqs.osmosis.zone"
 LCD="https://lcd.osmosis.zone"
-BOOT_DENOM="ibc/FE2CD1E6828EC0FAB8AF39BAC45BC25B965BA67CCBC50C13A14BD610B0D1E2C4"
+BOOT_DENOM="ibc/E6931F78057F7CC5DA0FD6CEF82FF39373A6E0452BF1FD76910B93292CF356C1"
 BOOT_HASH=BOOT_DENOM.split("/",1)[1]
 OUTPUT=pathlib.Path("research/data/osmosis-boot-pools-latest.json")
 
@@ -51,7 +51,7 @@ def main():
         result["errors"].append("Denom verification unavailable: "+str(err))
         result["integrity_passed"]=False
 
-    # SQS /pools is an officially documented pool-discovery endpoint.
+    # Historical BOOT pools: 595, 596 and 597 from Osmosis 2021-2023 public records.\n    # They must be verified against the BOOT IBC denom in current pool balances.\n    result["historical_pool_ids_to_check"]=[595,596,597]\n    # SQS /pools is an officially documented pool-discovery endpoint.
     # A successful match is an on-chain pool association, not an ownership claim.
     cursor=0
     for page in range(30):
@@ -67,7 +67,7 @@ def main():
         nxt=obj.get("meta",{}).get("next_cursor",-1)
         if nxt in (-1,None) or str(nxt)==str(cursor):break
         cursor=int(nxt)
-    # Do not interpret status until denom trace is validated.
+    # Independently request documented historical pool IDs.\n    # This is not a historical snapshot; data returned is the current state.\n    try:\n        known,url=fetch(SQS,"/pools",{"filter[id]":"595,596,597"})\n        result["sources"]["historical_pool_id_lookup"]=url\n        result["historical_pool_current_status"]=known.get("data",[]) if isinstance(known,dict) else known\n    except Exception as err:\n        result["errors"].append("Historical pool ID lookup unavailable: "+str(err))\n    # Do not interpret status until denom trace is validated.
     result["pool_count"]=len(result["pools"])
     result["analysis_limitations"]=[
        "Snapshot is latest state, not reserves in 2025/2026.",
