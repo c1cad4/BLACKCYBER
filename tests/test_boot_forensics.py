@@ -63,5 +63,19 @@ class BootForensicsTests(unittest.TestCase):
         self.assertEqual(self.reserves.BOOT_DENOM,self.audit.BOOT_DENOM)
         self.assertEqual(self.reserves.POOLS,(596,597))
 
+    def test_actual_exit_token_amounts_need_unique_event(self):
+        good={"logs":[{"msg_index":0,"events":[{"type":"pool_exited","attributes":[
+            {"key":"pool_id","value":"596"},
+            {"key":"sender","value":"osmo1example"},
+            {"key":"tokens_out","value":"12uosmo,340ibc/FE2CD1E6828EC0FAB8AF39BAC45BC25B965BA67CCBC50C13A14BD610B0D1E2C4"}
+        ]}]}]}
+        found=self.verify.match_pool_exit_events(good,596,"osmo1example")
+        self.assertEqual(len(found),1)
+        self.assertEqual(found[0]["tokens_out"][0]["amount_atomic"],"12")
+        self.assertEqual(len(found[0]["tokens_out"]),2)
+        self.assertEqual(self.verify.match_pool_exit_events(good,597,"osmo1example"),[])
+        self.assertEqual(self.verify.match_pool_exit_events(
+            {"logs":good["logs"]+good["logs"]},596,"osmo1example"),[])
+
 if __name__ == "__main__":
     unittest.main()
