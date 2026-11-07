@@ -1,0 +1,40 @@
+name: BOOT liquidity forensic audit
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/osmosis_boot_*.py'
+      - 'tests/test_boot_forensics.py'
+      - '.github/workflows/boot-forensics.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify BOOT asset integrity and parser
+        run: python3 -m unittest discover -s tests -p 'test_boot_forensics.py' -v
+      - name: Run BOOT pool snapshot collector
+        run: python3 scripts/osmosis_boot_audit.py
+      - name: Search historical LP-exit event candidates
+        run: python3 scripts/osmosis_boot_exits.py
+      - name: Validate forensic outputs
+        run: |
+          python3 - <<'PY'
+          import json
+          for path in ('research/data/osmosis-boot-audit.json','research/data/boot-lp-exits.json'):
+              with open(path,encoding='utf-8') as f: result=json.load(f)
+              print(path, 'errors:',len(result.get('errors',[])))
+          PY
+      - name: Upload immutable findings for human review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-osmosis-forensic-snapshot
+          path: research/data/*.json
+          if-no-files-found: warn
+          retention-days: 30
