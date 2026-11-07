@@ -56,7 +56,227 @@
 .report-warning{color:#ffd69f!important}
 @media(max-width:850px){.review-flow{grid-template-columns:1fr 1fr}}
 @media(max-width:530px){.review-flow{grid-template-columns:1fr}.market-price{font-size:23px}.market-chart{height:190px}}
+
+
+/* ===== BLACKCYBER v0.8 visual skin: black neon cyber theme ===== */
+:root{
+  --bg:#020406;
+  --bg2:#060a10;
+  --card:#070c12;
+  --card2:#0a1018;
+  --line:#1c2430;
+  --line-neon:rgba(102,255,214,.22);
+  --fg:#edf7ff;
+  --muted:#8ea4b6;
+  --lime:#b8ff4f;
+  --green:#48ffb2;
+  --cyan:#5fd8ff;
+  --blue:#79a8ff;
+  --violet:#ba8cff;
+  --pink:#ff6adf;
+  --red:#ff788a;
+  --amber:#ffc977;
+}
+html{background:#020406}
+body{
+  background:
+    radial-gradient(circle at 10% 10%, rgba(95,216,255,.12), transparent 22%),
+    radial-gradient(circle at 90% 8%, rgba(186,140,255,.11), transparent 20%),
+    radial-gradient(circle at 82% 70%, rgba(255,106,223,.08), transparent 24%),
+    radial-gradient(circle at 18% 86%, rgba(72,255,178,.10), transparent 22%),
+    linear-gradient(180deg, #020406 0%, #03060a 40%, #020406 100%) !important;
+  position:relative;
+  overflow-x:hidden;
+}
+body:before{
+  opacity:.38 !important;
+  background-image:
+    linear-gradient(rgba(72,255,178,.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(95,216,255,.06) 1px, transparent 1px) !important;
+  background-size:44px 44px !important;
+  mask-image:linear-gradient(rgba(0,0,0,.9),rgba(0,0,0,.18));
+}
+body:after{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    repeating-linear-gradient(180deg, rgba(255,255,255,.026) 0 1px, transparent 1px 4px),
+    radial-gradient(circle at 50% 0%, rgba(72,255,178,.05), transparent 45%);
+  opacity:.28;
+  mix-blend-mode:screen;
+}
+header{
+  background:linear-gradient(180deg, rgba(4,8,14,.93), rgba(5,10,16,.86)) !important;
+  border-bottom:1px solid rgba(95,216,255,.17) !important;
+  box-shadow:0 14px 38px rgba(0,0,0,.48), 0 1px 0 rgba(95,216,255,.08) inset;
+}
+.ticker{
+  border-bottom:1px solid rgba(95,216,255,.12) !important;
+  text-shadow:0 0 8px rgba(72,255,178,.16);
+}
+.logo-tag span,
+.logo{
+  text-shadow:0 0 12px rgba(184,255,79,.18),0 0 22px rgba(95,216,255,.08);
+}
+.logo-tag small{
+  color:#a9c7ff !important;
+  text-shadow:0 0 10px rgba(121,168,255,.2);
+}
+.panel,.warnbox,.market-card,.profile-block{
+  background:linear-gradient(180deg, rgba(8,12,18,.92), rgba(5,9,14,.95)) !important;
+  border:1px solid rgba(95,216,255,.13) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.02) inset,
+    0 12px 36px rgba(0,0,0,.42),
+    0 0 28px rgba(95,216,255,.04),
+    0 0 34px rgba(184,255,79,.03);
+  position:relative;
+  overflow:hidden;
+}
+.panel::before,.warnbox::before,.market-card::before,.profile-block::before{
+  content:"";
+  position:absolute;
+  left:0; right:0; top:0; height:2px;
+  background:linear-gradient(90deg, transparent, var(--cyan), var(--pink), var(--lime), transparent);
+  opacity:.72;
+  pointer-events:none;
+}
+.intro,.hero-side,.profile,.analytics,.review-flow{position:relative}
+.intro::after,.profile::after{
+  content:"⟐  ⌬  ⟁";
+  position:absolute;
+  right:12px;
+  top:10px;
+  color:rgba(95,216,255,.28);
+  letter-spacing:8px;
+  font-size:12px;
+  pointer-events:none;
+}
+.tab,.chip,.btn,.linkbtn,select,input,textarea,.lang-picker button{
+  border-color:rgba(95,216,255,.16) !important;
+  background:linear-gradient(180deg, rgba(10,14,21,.96), rgba(7,10,16,.96)) !important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.015) inset, 0 0 18px rgba(95,216,255,.03);
+}
+.tab:hover,.chip:hover,.btn:hover,.linkbtn:hover,.lang-picker button:hover{
+  border-color:rgba(184,255,79,.32) !important;
+  box-shadow:0 0 20px rgba(184,255,79,.08),0 0 0 1px rgba(184,255,79,.09) inset;
+  transform:translateY(-1px);
+}
+.primary,.btn.primary,.tab.active,.selected{
+  background:linear-gradient(135deg, rgba(184,255,79,.16), rgba(95,216,255,.18), rgba(186,140,255,.16)) !important;
+  border-color:rgba(184,255,79,.34) !important;
+  color:#f2fbff !important;
+  box-shadow:0 0 26px rgba(95,216,255,.09),0 0 30px rgba(184,255,79,.08), 0 0 0 1px rgba(255,255,255,.03) inset;
+}
+.section-h h2,.profile-head h2,.market-price strong,.big,.value,.stat strong{
+  text-shadow:0 0 14px rgba(95,216,255,.12),0 0 22px rgba(184,255,79,.08);
+}
+.kicker,.sub,.muted,.method,.market-note,.profile-detail,.source small{letter-spacing:.04em}
+.table tr,.project-row,.profile-person,.source,.review-step,.net{
+  transition:background .22s ease, transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+.table tr:hover,.project-row:hover,.profile-person:hover,.source:hover,.review-step:hover,.net:hover{
+  background:rgba(95,216,255,.05) !important;
+  box-shadow:0 0 0 1px rgba(95,216,255,.08) inset;
+}
+.table tr:hover td,.project-row:hover *{text-shadow:0 0 10px rgba(95,216,255,.07)}
+.table thead th{
+  background:linear-gradient(180deg, rgba(9,12,18,.96), rgba(7,10,16,.96)) !important;
+  border-bottom-color:rgba(95,216,255,.18) !important;
+}
+.profile-logo,.face{
+  box-shadow:0 0 0 1px rgba(95,216,255,.2) inset, 0 0 26px rgba(184,255,79,.07), 0 0 40px rgba(95,216,255,.06);
+}
+.profile-chip,.profile-chips .chip,.chip{
+  color:#d6f1ff;
+}
+.warn{color:#ffd797 !important}
+.good{color:#6effc8 !important}
+.market-chart{
+  border:1px solid rgba(95,216,255,.1);
+  background:
+    linear-gradient(180deg, rgba(8,12,18,.8), rgba(4,7,12,.96)),
+    radial-gradient(circle at top right, rgba(95,216,255,.06), transparent 32%);
+}
+.footer{
+  border-top:1px solid rgba(95,216,255,.14) !important;
+  color:#9ab0c0 !important;
+}
+.cyber-runes,
+.cyber-glyph{
+  position:fixed;
+  z-index:0;
+  pointer-events:none;
+  user-select:none;
+  text-shadow:0 0 18px currentColor, 0 0 42px currentColor;
+}
+.cyber-runes{
+  top:98px;
+  width:46px;
+  color:rgba(95,216,255,.28);
+  font-size:18px;
+  line-height:1.85;
+  letter-spacing:1px;
+  opacity:.72;
+}
+.cyber-runes-left{left:10px}
+.cyber-runes-right{right:10px;color:rgba(184,255,79,.25)}
+.cyber-glyph{
+  font-weight:800;
+  opacity:.12;
+  animation:cyberFloat 10s ease-in-out infinite;
+}
+.glyph-a{left:4%;top:33%;font-size:34px;color:var(--cyan)}
+.glyph-b{right:6%;top:45%;font-size:42px;color:var(--pink);animation-delay:-3s}
+.glyph-c{left:8%;bottom:16%;font-size:38px;color:var(--lime);animation-delay:-5.5s}
+.glyph-d{right:11%;bottom:11%;font-size:32px;color:var(--violet);animation-delay:-1.5s}
+.cyber-orbit{
+  position:fixed;
+  inset:auto;
+  top:84px;
+  right:84px;
+  width:180px;
+  height:180px;
+  border-radius:50%;
+  border:1px solid rgba(95,216,255,.08);
+  box-shadow:0 0 0 1px rgba(184,255,79,.04) inset, 0 0 34px rgba(95,216,255,.03);
+  pointer-events:none;
+  z-index:0;
+}
+.cyber-orbit::before,
+.cyber-orbit::after{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  border:1px dashed rgba(184,255,79,.12);
+  inset:18px;
+}
+.cyber-orbit::after{
+  inset:42px;
+  border-style:solid;
+  border-color:rgba(255,106,223,.08);
+}
+@keyframes cyberFloat{
+  0%,100%{transform:translateY(0px) translateX(0px)}
+  25%{transform:translateY(-8px) translateX(4px)}
+  50%{transform:translateY(6px) translateX(-3px)}
+  75%{transform:translateY(-4px) translateX(5px)}
+}
+@media (max-width: 980px){
+  .cyber-runes,.cyber-glyph,.cyber-orbit{display:none}
+}
+
 </style></head><body>
+<div class="cyber-runes cyber-runes-left">⊕<br>⌬<br>⟐<br>∴<br>⟁<br>⋈<br>⊘</div>
+<div class="cyber-runes cyber-runes-right">≋<br>⟣<br>⟢<br>⌁<br>⊙<br>⟡<br>∷</div>
+<div class="cyber-glyph glyph-a">⊕</div>
+<div class="cyber-glyph glyph-b">⌬</div>
+<div class="cyber-glyph glyph-c">⟁</div>
+<div class="cyber-glyph glyph-d">⟡</div>
+<div class="cyber-orbit" aria-hidden="true"></div>
+
 <div class="shell"><div class="ticker"><div><span>Реестр: <strong id="tickCases">9</strong> инцидентов</span><span>Справочник: <strong id="tickEcos">54</strong> экосистем</span><span>Метод: <strong>проверяемые источники</strong></span></div><div>BLACKCYBER / RESEARCH PREVIEW · 07 NOV 2026</div></div></div>
 <header><div class="inside"><a href="#home" class="logo" aria-label="BLACKCYBER">
 <span class="logo-eye" aria-hidden="true">
