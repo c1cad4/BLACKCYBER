@@ -22,11 +22,13 @@ jobs:
         run: python3 scripts/osmosis_boot_audit.py
       - name: Search historical LP-exit event candidates
         run: python3 scripts/osmosis_boot_exits.py
+      - name: Verify LP exits and compile sender ranking
+        run: python3 scripts/osmosis_boot_verify_exits.py
       - name: Validate forensic outputs
         run: |
           python3 - <<'PY'
           import json
-          for path in ('research/data/osmosis-boot-audit.json','research/data/boot-lp-exits.json'):
+          for path in ('research/data/osmosis-boot-audit.json','research/data/boot-lp-exits.json','research/data/boot-lp-exits-verified.json'):
               with open(path,encoding='utf-8') as f: result=json.load(f)
               print(path, 'errors:',len(result.get('errors',[])))
           PY
