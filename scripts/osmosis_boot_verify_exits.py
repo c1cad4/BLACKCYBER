@@ -101,6 +101,37 @@ def extract_actual_out(tx):
         result.append({"event_type":kind,"attributes":clean})
     return result
 
+def parse_token_amounts(s):
+    """Parse Cosmos comma-separated integer coin quantities without prices."""
+    import re
+    if not isinstance(s,str):
+        return []
+    pieces=s.split(",")
+    parsed=[]
+    for item in pieces:
+        m=re.fullmatch(r"\s*(\d+)([A-Za-z][^\s,]*)\s*",item)
+        if not m:
+            return []
+        parsed.append({"amount_atomic":m.group(1),"denom":m.group(2)})
+    return parsed
+
+def match_pool_exit_events(tx_response,pool,sender):
+    """Actual tokens_out only if exactly ONE unambiguous event matches pool/sender."""
+    matches=[]
+    # Prefer per-message ABCI logs; each carries a msg_index.
+    for log in tx_response.get("logs",[]) or []:
+        for ev in log.get("events",[]) or []:
+            if ev.get("type")!="pool_exited":
+                continue
+            attrs={str(a.get("key")):str(a.get("value"))
+                   for a in ev.get("attributes",[]) or []}
+            if str(attrs.get("pool_id"))!=str(pool) or attrs.get("sender")!=sender:
+                continue
+            parsed=parse_token_amounts(attrs.get("tokens_out"))
+            if parsed:
+                matches.append({"message_index":log.get("msg_index"),"tokens_out":parsed})
+    return matches if len(matches)==1 else []
+
 def inspect_candidate(entry):
     pool=int(entry["pool_id"])
     if pool not in POOLS:
@@ -119,12 +150,16 @@ def inspect_candidate(entry):
     if not stamp and height:
         block=request(RPC+"/block?height="+height)
         stamp=(block.get("result",{}).get("block",{}).get("header",{}).get("time"))
+    actual=[]
+    if len(messages)==1 and messages[0].get("sender_address"):
+        actual=match_pool_exit_events(resp,pool,messages[0]["sender_address"])
     return {"hash":h,"pool_id":pool,"height":height,"timestamp_utc":stamp,
             "status":"confirmed_successful_lp_exit_message",
             "messages":messages,
             "event_hints":extract_actual_out(resp),
-            "amounts_verified":False,
-            "amounts_note":"Decode pool_exited tokens_out with message index; event hints may contain other transfers",
+            "amounts_verified":len(actual)==1,
+            "actual_tokens_out":actual[0]["tokens_out"] if actual else None,
+            "amounts_note":"Matched unique pool_exited event" if actual else "No unique pool_exited event: actual amounts unresolved",
             "usd_value":None,
             "attributed_human":None}
 
